@@ -1,0 +1,293 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Diabetes Screening Model</title>
+  <meta name="description" content="A recall-first logistic regression for diabetes screening on the Pima Indians dataset: hypothesis-driven EDA, leakage-free cleaning, baselines and class-imbalance handling.">
+  <meta property="og:title" content="Diabetes Screening Model">
+  <meta property="og:description" content="Catching 4 in 5 diabetes cases with a simple, honest logistic regression.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%232a78d6'/%3E%3Cstop offset='1' stop-color='%23eb6834'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='32' height='32' rx='8' fill='url(%23g)'/%3E%3Cpath d='M16 7c3.5 5 6 8.2 6 11a6 6 0 0 1-12 0c0-2.8 2.5-6 6-11z' fill='white'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/style.css">
+  <script>
+    // Apply the saved theme before first paint to avoid a flash
+    try { const t = localStorage.getItem("theme"); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
+  </script>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="container">
+    <a class="brand" href="#top">
+      <span class="brand-mark" aria-hidden="true">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2c4.2 6 7 9.8 7 13.2a7 7 0 0 1-14 0C5 11.8 7.8 8 12 2z"/></svg>
+      </span>
+      Diabetes Screening
+    </a>
+    <div class="nav-links">
+      <a href="#problem">Problem</a>
+      <a href="#data">Data</a>
+      <a href="#hypotheses">Hypotheses</a>
+      <a href="#models">Models</a>
+      <a href="#threshold">Threshold</a>
+      <a href="#try">Try it</a>
+    </div>
+    <button class="icon-btn" id="theme-toggle" aria-label="Toggle dark mode" title="Toggle theme">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+    </button>
+    <a class="icon-btn" href="https://github.com/NicolaiTurcan/first_amle_project_diabetes" aria-label="GitHub repository" title="GitHub">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5a12 12 0 0 0-3.8 23.4c.6.1.8-.3.8-.6v-2c-3.3.7-4-1.6-4-1.6-.6-1.4-1.4-1.8-1.4-1.8-1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.7-1.6-2.7-.3-5.5-1.3-5.5-6 0-1.2.5-2.3 1.2-3.1-.1-.3-.5-1.5.1-3.2 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0C17.3 4.7 18.3 5 18.3 5c.7 1.7.2 2.9.1 3.2.8.8 1.2 1.9 1.2 3.1 0 4.7-2.8 5.7-5.5 6 .4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6A12 12 0 0 0 12 .5z"/></svg>
+    </a>
+  </div>
+</nav>
+
+<header class="hero" id="top">
+  <div class="container hero-grid">
+    <div>
+      <span class="eyebrow"><span class="dot"></span>Machine learning project · Logistic regression</span>
+      <h1>Catching <em>4 in 5</em> diabetes cases with a simple, honest model.</h1>
+      <p class="lede">A screening model for the Pima Indians Diabetes dataset. A missed case is far more dangerous than a false alarm, so the model is tuned for <strong>recall</strong>, not accuracy, and every step is checked against baselines without leaking the test set.</p>
+      <div class="cta">
+        <a class="btn btn-primary" href="#try">Try the model →</a>
+        <a class="btn" href="https://github.com/NicolaiTurcan/first_amle_project_diabetes/blob/main/01_diabetes_project.ipynb">Read the notebook</a>
+      </div>
+    </div>
+    <aside class="hero-card reveal" aria-label="Headline result">
+      <div class="label">Test recall · final model</div>
+      <div class="big num" id="hero-recall">79.6<small>%</small></div>
+      <div class="label"><span id="hero-tp">43</span> of <span id="hero-pos">54</span> diabetes cases in the test set were caught</div>
+      <div class="dots" id="hero-dots" role="img" aria-label="54 dots, 43 filled for caught cases, 11 outlined for missed cases"></div>
+      <div class="legend"><span><i style="background:var(--series-pos)"></i>Caught</span><span><i class="ring"></i>Missed</span></div>
+      <div class="compare">
+        <div><b class="num">50.0%</b>Plain logistic regression</div>
+        <div><b class="num">44.4%</b>Rule-based baseline</div>
+      </div>
+    </aside>
+  </div>
+</header>
+
+<main>
+  <!-- Problem -->
+  <section id="problem">
+    <div class="container">
+      <div class="section-head reveal">
+        <div class="kicker">01 · The goal</div>
+        <h2>Which mistake costs <em>more?</em></h2>
+        <p>Before modelling anything, the metric was chosen by asking what each error means for a patient. The answer makes <strong>recall</strong> (sensitivity) the primary metric, the same measure the original 1988 ADAP paper uses for clinical tests.</p>
+      </div>
+      <div class="grid-2">
+        <div class="card mistake bad reveal">
+          <span class="tag">✕ False negative · costly</span>
+          <h3>A missed diabetes case</h3>
+          <p>The patient is told they are healthy and gets no treatment. Untreated diabetes leads to severe, long-term complications.</p>
+        </div>
+        <div class="card mistake ok reveal">
+          <span class="tag">✓ False positive · acceptable</span>
+          <h3>A false alarm</h3>
+          <p>A healthy patient is flagged. A routine follow-up blood test clears it up. That costs time and money, not health.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Data -->
+  <section id="data">
+    <div class="container">
+      <div class="section-head reveal">
+        <div class="kicker">02 · The data</div>
+        <h2>768 patients, and zeros that <em>aren't</em> zeros</h2>
+        <p>Female patients of Pima Indian heritage, aged 21+. The data is split 80/20 (stratified) <em>before</em> exploring it. A glucose level or BMI of 0 is impossible, so those zeros are missing values. They are filled with <strong>medians from the training set only</strong>, and the same medians are applied to the test set.</p>
+      </div>
+      <div class="grid-4" id="stat-tiles"></div>
+      <div class="chart-card reveal" style="margin-top:20px">
+        <div class="chart-head">
+          <div>
+            <h3>Hidden missing values per column</h3>
+            <p>Share of the 614 training rows recorded as 0, imputed with the training median</p>
+          </div>
+        </div>
+        <div class="chart" id="chart-zeros"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Hypotheses -->
+  <section id="hypotheses">
+    <div class="container">
+      <div class="section-head reveal">
+        <div class="kicker">03 · Hypothesis-driven EDA</div>
+        <h2>Three hypotheses, written <em>before</em> looking</h2>
+        <p>Each one is tested on the training set with a one-sided <strong>Mann-Whitney U test</strong> (the measurements are skewed), at a <strong>Bonferroni-corrected</strong> α = 0.0167 because three tests are run.</p>
+      </div>
+      <div class="grid-3" id="hyp-cards"></div>
+      <div class="chart-card reveal" style="margin-top:20px">
+        <div class="chart-head">
+          <div>
+            <h3>How the two groups differ</h3>
+            <p>Share of each group per bin (training set, after cleaning)</p>
+          </div>
+          <div class="seg" id="dist-toggle" role="group" aria-label="Feature"></div>
+        </div>
+        <div class="legend" style="margin-bottom:8px"><span><i class="bar" style="background:var(--series-neg)"></i>No diabetes</span><span><i class="bar" style="background:var(--series-pos)"></i>Diabetes</span></div>
+        <div class="chart" id="chart-dist"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Models -->
+  <section id="models">
+    <div class="container">
+      <div class="section-head reveal">
+        <div class="kicker">04 · Models</div>
+        <h2>Beat the baselines, then fix the <em>imbalance</em></h2>
+        <p>Only 35% of patients have diabetes, so a plain model leans towards "healthy". Two fixes were tried: <code>class_weight="balanced"</code> and a lower decision threshold of 0.3, chosen on the training data. All models were scored once on the held-out test set.</p>
+      </div>
+      <div class="chart-card reveal">
+        <div class="chart-head">
+          <div>
+            <h3>Model comparison</h3>
+            <p>Bars show the test score, dots the training score</p>
+          </div>
+          <div class="seg" id="metric-toggle" role="group" aria-label="Metric"></div>
+        </div>
+        <div class="legend" style="margin-bottom:8px"><span><i class="bar" style="background:var(--series-neg)"></i>Test</span><span><i style="background:var(--text-primary)"></i>Train</span></div>
+        <div class="chart" id="chart-models"></div>
+        <details class="table-view">
+          <summary>Show all scores as a table</summary>
+          <div class="table-wrap" id="results-table"></div>
+        </details>
+      </div>
+
+      <div class="chart-card reveal" style="margin-top:20px">
+        <div class="chart-head">
+          <div>
+            <h3>Where each model still makes mistakes</h3>
+            <p>Confusion matrix on the 154 test patients</p>
+          </div>
+          <div class="seg" id="cm-toggle" role="group" aria-label="Model"></div>
+        </div>
+        <div class="cm-wrap">
+          <div>
+            <div class="cm" id="cm"></div>
+          </div>
+          <div class="cm-notes" id="cm-notes"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Threshold -->
+  <section id="threshold">
+    <div class="container">
+      <div class="section-head reveal">
+        <div class="kicker">05 · The decision threshold</div>
+        <h2>Trading precision for <em>recall</em></h2>
+        <p>Logistic regression outputs a probability. Lowering the cut-off from 0.5 to 0.3 flags more patients: recall rises, precision drops slightly. The curve is computed on the <strong>training</strong> set, where the threshold was chosen, so the test set stays unseen.</p>
+      </div>
+      <div class="grid-2 threshold-grid" style="grid-template-columns: 1.6fr 1fr">
+        <div class="chart-card reveal">
+          <div class="chart-head">
+            <div>
+              <h3>Scores vs. threshold</h3>
+              <p>Plain logistic regression, training set. Hover to inspect.</p>
+            </div>
+          </div>
+          <div class="legend" style="margin-bottom:8px"><span><i class="line" style="background:var(--series-neg)"></i>Recall</span><span><i class="line" style="background:var(--series-pos)"></i>Precision</span><span><i class="line" style="background:var(--series-3)"></i>F1</span></div>
+          <div class="chart" id="chart-threshold"></div>
+        </div>
+        <div class="chart-card reveal">
+          <div class="chart-head">
+            <div>
+              <h3>What drives the prediction</h3>
+              <p>Change in log-odds per +1 standard deviation</p>
+            </div>
+          </div>
+          <div class="chart" id="chart-importance"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Try it -->
+  <section id="try">
+    <div class="container">
+      <div class="section-head reveal">
+        <div class="kicker">06 · Interactive</div>
+        <h2>Try the <em>model</em></h2>
+        <p>The trained coefficients run right in your browser. Move the sliders to see how each measurement shifts the predicted probability. Defaults are the training medians.</p>
+      </div>
+      <div class="try">
+        <div class="card reveal"><div class="sliders" id="sliders"></div></div>
+        <div class="card result reveal">
+          <div class="label" style="font-size:13px;color:var(--text-secondary)">Predicted probability of diabetes</div>
+          <div class="gauge">
+            <svg viewBox="0 0 200 112" aria-hidden="true">
+              <path d="M14 100 A86 86 0 0 1 186 100" fill="none" stroke="var(--surface-2)" stroke-width="16" stroke-linecap="round"/>
+              <path id="gauge-arc" d="M14 100 A86 86 0 0 1 186 100" fill="none" stroke="var(--accent)" stroke-width="16" stroke-linecap="round" pathLength="100" stroke-dasharray="0 100"/>
+              <line id="gauge-thr" x1="0" y1="0" x2="0" y2="0" stroke="var(--text-primary)" stroke-width="2"/>
+            </svg>
+            <div class="g-val" id="gauge-val">0%</div>
+          </div>
+          <div class="label" style="font-size:12px;color:var(--text-muted);margin-top:6px">Tick = decision threshold 0.3</div>
+          <div class="flag off" id="flag">Not flagged</div>
+          <div><button class="btn reset" id="reset">Reset to medians</button></div>
+          <p class="disclaimer">Educational demo only. This model was trained on 614 patients from one specific population and is <strong>not a medical tool</strong>. It cannot diagnose diabetes or replace a doctor.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Takeaways & stack -->
+  <section id="takeaways">
+    <div class="container grid-2" style="gap:48px">
+      <div class="reveal">
+        <div class="kicker">07 · Takeaways</div>
+        <h2 style="font-size:32px;margin-bottom:24px">What I learned</h2>
+        <ol class="takeaways" style="padding:0;margin:0">
+          <li><div><b>Pick the metric from the cost of mistakes.</b><p>Accuracy hides missed cases. Recall makes them visible.</p></div></li>
+          <li><div><b>Split first, then explore.</b><p>Every statistic (medians, cut-offs, threshold) is learned on the training set only.</p></div></li>
+          <li><div><b>Baselines keep you honest.</b><p>The plain model barely beat a one-line glucose rule. The improvement came from handling the imbalance.</p></div></li>
+          <li><div><b>The threshold is a product decision.</b><p>Going from 0.5 to 0.3 lifts test recall from 50% to 80% for 11 more false alarms.</p></div></li>
+        </ol>
+      </div>
+      <div class="reveal">
+        <div class="kicker">Tech stack</div>
+        <h2 style="font-size:32px;margin-bottom:24px">Built with</h2>
+        <div class="chips">
+          <span class="chip">Python <small>3.13</small></span>
+          <span class="chip">pandas</span>
+          <span class="chip">NumPy</span>
+          <span class="chip">SciPy <small>stats</small></span>
+          <span class="chip">scikit-learn</span>
+          <span class="chip">Matplotlib</span>
+          <span class="chip">Seaborn</span>
+          <span class="chip">Jupyter</span>
+          <span class="chip">uv</span>
+          <span class="chip">GitHub Pages</span>
+        </div>
+        <div class="card" style="margin-top:24px">
+          <h3>Reproduce it</h3>
+          <p style="margin-bottom:10px">Clone the repo, install with uv, and run the notebook top to bottom.</p>
+          <code style="display:block;padding:12px;white-space:pre-wrap">git clone https://github.com/NicolaiTurcan/first_amle_project_diabetes.git
+cd first_amle_project_diabetes
+uv sync</code>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="container">
+    <span>Nicolai Turcan · AI &amp; ML Engineering Bootcamp</span>
+    <span>Data: <a href="https://www.kaggle.com/datasets/uciml/pima-indians-diabetes-database">Pima Indians Diabetes Database</a> · <a href="https://github.com/NicolaiTurcan/first_amle_project_diabetes">Source on GitHub</a></span>
+  </div>
+</footer>
+
+<script src="assets/site-data.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>
